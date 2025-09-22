@@ -1,0 +1,24 @@
+syntax = "proto3";
+package worker;
+
+message HealthRequest {}
+message HealthReply { string status = 1; }
+
+message TransformTask {
+  string request_id = 1;
+  string image_id   = 2;
+  string operation  = 3; // e.g., "grayscale", "resize:800x600"
+}
+
+message TransformReply {
+  string request_id = 1;
+  string image_id   = 2;
+  string status     = 3; // "OK" | "ERROR"
+  string result_path = 4; // dummy for avance 2
+  string log_message = 5;
+}
+
+service WorkerService {
+  rpc Health(HealthRequest) returns (HealthReply);
+  rpc SubmitTask(TransformTask) returns (TransformReply);
+}
