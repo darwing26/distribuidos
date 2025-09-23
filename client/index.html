@@ -2,203 +2,577 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Cliente Web - Distribuidos (Avance 2)</title>
+  <title>Sistema Distribuido - Panel de Control</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 20px; }
-    h1 { font-size: 20px; }
-    section { border: 1px solid #ddd; padding: 16px; border-radius: 8px; margin-bottom: 16px; }
-    label { display: block; margin-top: 8px; }
-    input[type="text"], input[type="email"], input[type="number"] { width: 280px; padding: 6px; }
-    button { padding: 8px 12px; margin-top: 10px; cursor: pointer; }
-    .row { display: flex; gap: 16px; flex-wrap: wrap; }
-    pre { background: #f7f7f7; padding: 10px; border-radius: 6px; overflow: auto; max-height: 260px; }
-    .ok { color: #0a884f; }
-    .err { color: #b00020; }
-    small.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-  </style>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="styles.css" rel="stylesheet">
 </head>
-<body>
-  <h1>Cliente Web - Sistema Distribuido (Avance 2)</h1>
-  <p>Conecta con el backend FastAPI y el worker gRPC. Abre Swagger en <a href="http://127.0.0.1:8000/docs" target="_blank">/docs</a>.</p>
+<<body>
+  <div class="container">
+    <div class="header">
+      <h1><i class="fas fa-network-wired"></i> Sistema Distribuido - Panel de Control</h1>
+      <p>Gestiona trabajadores, procesa imágenes y monitorea el estado del sistema distribuido</p>
+    </div>
 
-  <section>
-    <h2>Configuración</h2>
-    <label>API Base URL:
-      <input id="apiBase" type="text" value="http://127.0.0.1:8000" />
-    </label>
-    <div>Estado: <span id="status" class="ok">listo</span></div>
-  </section>
-
-  <section>
-    <h2>Auth</h2>
-    <div class="row">
-      <div>
-        <h3>Signup</h3>
-        <label>Email: <input id="signupEmail" type="email" value="demo@example.com" /></label>
-        <label>Nombre: <input id="signupName" type="text" value="Demo" /></label>
-        <button onclick="signup()">Crear usuario</button>
-      </div>
-      <div>
-        <h3>Login</h3>
-        <label>Email: <input id="loginEmail" type="email" value="demo@example.com" /></label>
-        <button onclick="login()">Login</button>
-        <div><small class="mono">userId: <span id="userId">-</span>, token: <span id="token">-</span></small></div>
+    <div class="config-panel">
+      <label><i class="fas fa-server"></i> URL del API Backend:</label>
+      <input id="apiBase" type="text" value="http://127.0.0.1:8000" placeholder="http://127.0.0.1:8000" />
+      <div style="margin-top: 12px;">
+        <span class="status-badge status-success">
+          <i class="fas fa-circle"></i>
+          <span id="status">Conectado</span>
+        </span>
+        <a href="http://127.0.0.1:8000/docs" target="_blank" class="btn btn-secondary" style="margin-left: 12px;">
+          <i class="fas fa-book"></i> Ver Swagger Docs
+        </a>
       </div>
     </div>
-    <pre id="authOut"></pre>
-  </section>
 
-  <section>
-    <h2>Nodos</h2>
-    <div class="row">
-      <div>
-        <h3>Registrar nodo</h3>
-        <label>Nombre: <input id="nodeName" type="text" value="nodo1" /></label>
-        <label>Host: <input id="nodeHost" type="text" value="127.0.0.1" /></label>
-        <label>Port: <input id="nodePort" type="number" value="50051" /></label>
-        <button onclick="registerNode()">Registrar</button>
+    <div class="grid">
+      <!-- Auth Section -->
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-user-shield icon"></i>
+          <h2>Autenticación</h2>
+        </div>
+        
+        <div class="form-row">
+          <div>
+            <h3 style="margin-bottom: 16px; color: var(--primary);">Registro</h3>
+            <div class="form-group">
+              <label><i class="fas fa-envelope"></i> Email:</label>
+              <input id="signupEmail" type="email" value="demo@example.com" placeholder="usuario@email.com" />
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-user"></i> Nombre:</label>
+              <input id="signupName" type="text" value="Demo User" placeholder="Nombre completo" />
+            </div>
+            <button onclick="signup()" class="btn btn-primary">
+              <i class="fas fa-user-plus"></i> Crear Usuario
+            </button>
+          </div>
+          
+          <div>
+            <h3 style="margin-bottom: 16px; color: var(--success);">Iniciar Sesión</h3>
+            <div class="form-group">
+              <label><i class="fas fa-envelope"></i> Email:</label>
+              <input id="loginEmail" type="email" value="demo@example.com" placeholder="usuario@email.com" />
+            </div>
+            <button onclick="login()" class="btn btn-success">
+              <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+            </button>
+          </div>
+        </div>
+
+        <div id="userInfo" class="user-info" style="display: none;">
+          <h3><i class="fas fa-user-check"></i> Usuario Activo</h3>
+          <p>ID: <span id="userId">-</span> | Token: <span id="token">-</span></p>
+        </div>
+
+        <div id="authOut" class="output"></div>
       </div>
-      <div>
-        <h3>Ping</h3>
-        <label>Node ID: <input id="pingNodeId" type="number" value="1" /></label>
-        <button onclick="pingNode()">Ping</button>
-      </div>
-      <div>
-        <h3>Listar nodos</h3>
-        <button onclick="listNodes()">Listar</button>
+
+      <!-- Nodes Section -->
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-server icon"></i>
+          <h2>Gestión de Nodos</h2>
+        </div>
+        
+        <div class="form-row">
+          <div>
+            <h3 style="margin-bottom: 16px; color: var(--primary);">Registrar Nodo</h3>
+            <div class="form-group">
+              <label><i class="fas fa-tag"></i> Nombre:</label>
+              <input id="nodeName" type="text" value="worker-01" placeholder="worker-01" />
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-globe"></i> Host:</label>
+              <input id="nodeHost" type="text" value="127.0.0.1" placeholder="127.0.0.1" />
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-ethernet"></i> Puerto:</label>
+              <input id="nodePort" type="number" value="50051" placeholder="50051" />
+            </div>
+            <button onclick="registerNode()" class="btn btn-primary">
+              <i class="fas fa-plus"></i> Registrar Nodo
+            </button>
+          </div>
+          
+          <div>
+            <h3 style="margin-bottom: 16px; color: var(--warning);">Monitoreo</h3>
+            <div class="form-group">
+              <label><i class="fas fa-hashtag"></i> ID del Nodo:</label>
+              <input id="pingNodeId" type="number" value="1" placeholder="1" />
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 24px;">
+              <button onclick="pingNode()" class="btn btn-warning">
+                <i class="fas fa-heartbeat"></i> Ping
+              </button>
+              <button onclick="listNodes()" class="btn btn-secondary">
+                <i class="fas fa-list"></i> Listar Todos
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="nodesOut" class="output"></div>
       </div>
     </div>
-    <pre id="nodesOut"></pre>
-  </section>
 
-  <section>
-    <h2>Batches (prueba)</h2>
-    <div class="row">
-      <div>
-        <h3>Enviar batch</h3>
-        <label>User ID: <input id="batchUserId" type="number" value="1" /></label>
-        <label>Imágenes (JSON):
-          <textarea id="imagesJson" rows="6" cols="50">[
-  {"image_id":"img1","operations":["grayscale","resize:800x600"]},
-  {"image_id":"img2","operations":["rotate:90"]}
+    <!-- Batches Section -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-tasks icon"></i>
+        <h2>Procesamiento de Lotes</h2>
+      </div>
+      
+      <div class="form-row">
+        <div>
+          <h3 style="margin-bottom: 16px; color: var(--primary);">Crear Lote</h3>
+          <div class="form-group">
+            <label><i class="fas fa-user"></i> ID Usuario:</label>
+            <input id="batchUserId" type="number" value="1" placeholder="1" />
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-code"></i> Configuración de Imágenes (JSON):</label>
+            <textarea id="imagesJson" placeholder="Configuración de transformaciones...">[
+  {
+    "image_id": "imagen-001",
+    "operations": ["grayscale", "resize:800x600", "blur:2"]
+  },
+  {
+    "image_id": "imagen-002", 
+    "operations": ["rotate:90", "sharpen"]
+  }
 ]</textarea>
-        </label>
-        <button onclick="submitBatch()">Crear batch</button>
+          </div>
+          <button onclick="submitBatch()" class="btn btn-primary">
+            <i class="fas fa-paper-plane"></i> Crear Lote
+          </button>
+        </div>
+        
+        <div>
+          <h3 style="margin-bottom: 16px; color: var(--success);">Consultar Estado</h3>
+          <div class="form-group">
+            <label><i class="fas fa-hashtag"></i> ID del Lote:</label>
+            <input id="batchId" type="number" value="1" placeholder="1" />
+          </div>
+          <button onclick="batchStatus()" class="btn btn-success">
+            <i class="fas fa-search"></i> Consultar Estado
+          </button>
+          
+          <h3 style="margin: 24px 0 16px; color: var(--warning);">Ejecutar Tarea</h3>
+          <div class="form-group">
+            <label><i class="fas fa-hashtag"></i> ID Lote:</label>
+            <input id="dispatchBatchId" type="number" value="1" placeholder="1" />
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-server"></i> ID Nodo:</label>
+            <input id="dispatchNodeId" type="number" value="1" placeholder="1" />
+          </div>
+          <button onclick="dispatchTest()" class="btn btn-warning">
+            <i class="fas fa-rocket"></i> Enviar a Worker
+          </button>
+        </div>
       </div>
-      <div>
-        <h3>Status de batch</h3>
-        <label>Batch ID: <input id="batchId" type="number" value="1" /></label>
-        <button onclick="batchStatus()">Consultar</button>
-      </div>
-      <div>
-        <h3>Dispatch test → worker</h3>
-        <label>Batch ID: <input id="dispatchBatchId" type="number" value="1" /></label>
-        <label>Node ID: <input id="dispatchNodeId" type="number" value="1" /></label>
-        <button onclick="dispatchTest()">Enviar tarea</button>
-      </div>
-    </div>
-    <pre id="batchOut"></pre>
-  </section>
 
-  <section>
-    <h2>Upload</h2>
-    <input id="fileInput" type="file" multiple />
-    <button onclick="uploadFiles()">Subir</button>
-    <pre id="uploadOut"></pre>
-  </section>
+      <div id="batchOut" class="output"></div>
+    </div>
+
+    <!-- Upload Section -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-upload icon"></i>
+        <h2>Subida de Archivos</h2>
+      </div>
+      
+      <div class="form-group">
+        <label><i class="fas fa-file-image"></i> Seleccionar imágenes:</label>
+        <input id="fileInput" type="file" multiple accept="image/*" />
+      </div>
+      <button onclick="uploadFiles()" class="btn btn-primary">
+        <i class="fas fa-cloud-upload-alt"></i> Subir Archivos
+      </button>
+      
+      <div id="uploadOut" class="output"></div>
+    </div>
+  </div>
 
   <script>
+    let currentUser = null;
+    let loadingStates = {};
+
     function apiBase() {
       return document.getElementById('apiBase').value.trim().replace(/\/+$/, '');
     }
-    function show(elId, data) {
-      document.getElementById(elId).textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+
+    function setLoading(buttonElement, isLoading) {
+      const originalContent = buttonElement.innerHTML;
+      if (isLoading) {
+        buttonElement.disabled = true;
+        buttonElement.style.opacity = '0.7';
+        const icon = buttonElement.querySelector('i');
+        if (icon) {
+          icon.className = 'fas fa-spinner loading';
+        }
+      } else {
+        buttonElement.disabled = false;
+        buttonElement.style.opacity = '1';
+        setTimeout(() => {
+          buttonElement.innerHTML = originalContent;
+        }, 100);
+      }
     }
-    async function http(method, path, body, isForm=false) {
+
+    function show(elId, data, isError = false) {
+      const element = document.getElementById(elId);
+      const content = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+      element.textContent = content;
+      element.className = `output ${isError ? 'error' : 'success'}`;
+      
+      // Auto-scroll to bottom
+      element.scrollTop = element.scrollHeight;
+    }
+
+    function showNotification(message, type = 'info') {
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        z-index: 1000;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        animation: slideIn 0.3s ease;
+      `;
+      
+      const colors = {
+        success: '#059669',
+        error: '#dc2626',
+        warning: '#d97706',
+        info: '#2563eb'
+      };
+      
+      notification.style.background = colors[type] || colors.info;
+      notification.textContent = message;
+      
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease forwards';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
+
+    async function http(method, path, body, isForm = false) {
       const url = apiBase() + path;
-      const opts = { method, headers: {} };
+      const opts = { 
+        method, 
+        headers: {},
+        timeout: 10000
+      };
+      
       if (!isForm && body !== undefined) {
         opts.headers['Content-Type'] = 'application/json';
         opts.body = JSON.stringify(body);
       }
       if (isForm) {
-        opts.body = body; // FormData
+        opts.body = body;
       }
-      const res = await fetch(url, opts);
-      const txt = await res.text();
-      try { return JSON.parse(txt); } catch { return txt; }
+      
+      try {
+        const res = await fetch(url, opts);
+        const txt = await res.text();
+        
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${txt}`);
+        }
+        
+        try { 
+          return JSON.parse(txt); 
+        } catch { 
+          return txt; 
+        }
+      } catch (error) {
+        showNotification(`Error de conexión: ${error.message}`, 'error');
+        throw error;
+      }
     }
 
-    // Auth
+    // Auth functions
     async function signup() {
-      const email = document.getElementById('signupEmail').value;
-      const name = document.getElementById('signupName').value;
-      const out = await http('POST', '/auth/signup', { email, name });
-      show('authOut', out);
-      if (out.user_id) document.getElementById('userId').textContent = out.user_id;
-    }
-    async function login() {
-      const email = document.getElementById('loginEmail').value;
-      const out = await http('POST', '/auth/login', { email });
-      show('authOut', out);
-      if (out.user_id) document.getElementById('userId').textContent = out.user_id;
-      if (out.token) document.getElementById('token').textContent = out.token;
-    }
-
-    // Nodes
-    async function registerNode() {
-      const name = document.getElementById('nodeName').value;
-      const host = document.getElementById('nodeHost').value;
-      const port = parseInt(document.getElementById('nodePort').value, 10);
-      const out = await http('POST', '/nodes/register', { name, host, port });
-      show('nodesOut', out);
-      if (out.id) document.getElementById('pingNodeId').value = out.id;
-    }
-    async function listNodes() {
-      const out = await http('GET', '/nodes');
-      show('nodesOut', out);
-    }
-    async function pingNode() {
-      const id = parseInt(document.getElementById('pingNodeId').value, 10);
-      const out = await http('POST', `/nodes/${id}/ping`);
-      show('nodesOut', out);
-    }
-
-    // Batches
-    async function submitBatch() {
-      const user_id = parseInt(document.getElementById('batchUserId').value, 10);
-      let images = [];
-      try { images = JSON.parse(document.getElementById('imagesJson').value); }
-      catch { alert('JSON inválido en imágenes'); return; }
-      const out = await http('POST', '/batches/submit', { user_id, images, note: 'demo desde la web' });
-      show('batchOut', out);
-      if (out.batch_id) {
-        document.getElementById('batchId').value = out.batch_id;
-        document.getElementById('dispatchBatchId').value = out.batch_id;
+      const btn = event.target;
+      setLoading(btn, true);
+      
+      try {
+        const email = document.getElementById('signupEmail').value.trim();
+        const name = document.getElementById('signupName').value.trim();
+        
+        if (!email || !name) {
+          showNotification('Por favor completa todos los campos', 'warning');
+          return;
+        }
+        
+        const out = await http('POST', '/auth/signup', { email, name });
+        show('authOut', out);
+        
+        if (out.user_id) {
+          showNotification('Usuario creado exitosamente', 'success');
+          document.getElementById('loginEmail').value = email;
+        }
+      } catch (error) {
+        show('authOut', error.message, true);
+      } finally {
+        setLoading(btn, false);
       }
     }
-    async function batchStatus() {
-      const batchId = parseInt(document.getElementById('batchId').value, 10);
-      const out = await http('GET', `/batches/${batchId}/status`);
-      show('batchOut', out);
-    }
-    async function dispatchTest() {
-      const batchId = parseInt(document.getElementById('dispatchBatchId').value, 10);
-      const nodeId = parseInt(document.getElementById('dispatchNodeId').value, 10);
-      const out = await http('POST', `/batches/${batchId}/dispatch_test/${nodeId}`);
-      show('batchOut', out);
+
+    async function login() {
+      const btn = event.target;
+      setLoading(btn, true);
+      
+      try {
+        const email = document.getElementById('loginEmail').value.trim();
+        
+        if (!email) {
+          showNotification('Por favor ingresa tu email', 'warning');
+          return;
+        }
+        
+        const out = await http('POST', '/auth/login', { email });
+        show('authOut', out);
+        
+        if (out.ok && out.user_id) {
+          currentUser = out;
+          document.getElementById('userId').textContent = out.user_id;
+          document.getElementById('token').textContent = out.token;
+          document.getElementById('userInfo').style.display = 'block';
+          document.getElementById('batchUserId').value = out.user_id;
+          showNotification('Inicio de sesión exitoso', 'success');
+        } else {
+          showNotification(out.message || 'Error al iniciar sesión', 'error');
+        }
+      } catch (error) {
+        show('authOut', error.message, true);
+      } finally {
+        setLoading(btn, false);
+      }
     }
 
-    // Upload
-    async function uploadFiles() {
-      const files = document.getElementById('fileInput').files;
-      if (!files || files.length === 0) { alert('Selecciona archivos'); return; }
-      const fd = new FormData();
-      for (const f of files) fd.append('files', f);
-      const out = await http('POST', '/files/upload', fd, true);
-      show('uploadOut', out);
+    // Node functions
+    async function registerNode() {
+      const btn = event.target;
+      setLoading(btn, true);
+      
+      try {
+        const name = document.getElementById('nodeName').value.trim();
+        const host = document.getElementById('nodeHost').value.trim();
+        const port = parseInt(document.getElementById('nodePort').value, 10);
+        
+        if (!name || !host || !port) {
+          showNotification('Por favor completa todos los campos del nodo', 'warning');
+          return;
+        }
+        
+        const out = await http('POST', '/nodes/register', { name, host, port });
+        show('nodesOut', out);
+        
+        if (out.id) {
+          document.getElementById('pingNodeId').value = out.id;
+          document.getElementById('dispatchNodeId').value = out.id;
+          showNotification('Nodo registrado exitosamente', 'success');
+        }
+      } catch (error) {
+        show('nodesOut', error.message, true);
+      } finally {
+        setLoading(btn, false);
+      }
     }
+
+    async function listNodes() {
+      const btn = event.target;
+      setLoading(btn, true);
+      
+      try {
+        const out = await http('GET', '/nodes');
+        show('nodesOut', out);
+        showNotification(`Se encontraron ${out.length} nodos`, 'info');
+      } catch (error) {
+        show('nodesOut', error.message, true);
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    async function pingNode() {
+      const btn = event.target;
+      setLoading(btn, true);
+      
+      try {
+        const id = parseInt(document.getElementById('pingNodeId').value, 10);
+        
+        if (!id) {
+          showNotification('Por favor ingresa un ID de nodo válido', 'warning');
+          return;
+        }
+        
+        const out = await http('POST', `/nodes/${id}/ping`);
+        show('nodesOut', out);
+        
+        const statusType = out.status === 'active' ? 'success' : 'error';
+        showNotification(`Nodo ${id}: ${out.status}`, statusType);
+      } catch (error) {
+        show('nodesOut', error.message, true);
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    // Batch functions
+    async function submitBatch() {
+      const btn = event.target;
+      setLoading(btn, true);
+      
+      try {
+        const user_id = parseInt(document.getElementById('batchUserId').value, 10);
+        const imagesText = document.getElementById('imagesJson').value.trim();
+        
+        if (!user_id || !imagesText) {
+          showNotification('Por favor completa todos los campos', 'warning');
+          return;
+        }
+        
+        let images = [];
+        try { 
+          images = JSON.parse(imagesText); 
+        } catch { 
+          showNotification('JSON inválido en configuración de imágenes', 'error');
+          return; 
+        }
+        
+        const out = await http('POST', '/batches/submit', { 
+          user_id, 
+          images, 
+          note: 'Lote creado desde el panel web' 
+        });
+        show('batchOut', out);
+        
+        if (out.batch_id) {
+          document.getElementById('batchId').value = out.batch_id;
+          document.getElementById('dispatchBatchId').value = out.batch_id;
+          showNotification(`Lote ${out.batch_id} creado exitosamente`, 'success');
+        }
+      } catch (error) {
+        show('batchOut', error.message, true);
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    async function batchStatus() {
+      const btn = event.target;
+      setLoading(btn, true);
+      
+      try {
+        const batchId = parseInt(document.getElementById('batchId').value, 10);
+        
+        if (!batchId) {
+          showNotification('Por favor ingresa un ID de lote válido', 'warning');
+          return;
+        }
+        
+        const out = await http('GET', `/batches/${batchId}/status`);
+        show('batchOut', out);
+        showNotification(`Estado del lote ${batchId} actualizado`, 'info');
+      } catch (error) {
+        show('batchOut', error.message, true);
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    async function dispatchTest() {
+      const btn = event.target;
+      setLoading(btn, true);
+      
+      try {
+        const batchId = parseInt(document.getElementById('dispatchBatchId').value, 10);
+        const nodeId = parseInt(document.getElementById('dispatchNodeId').value, 10);
+        
+        if (!batchId || !nodeId) {
+          showNotification('Por favor ingresa IDs válidos', 'warning');
+          return;
+        }
+        
+        const out = await http('POST', `/batches/${batchId}/dispatch_test/${nodeId}`);
+        show('batchOut', out);
+        
+        if (out.ok) {
+          showNotification('Tarea enviada al worker exitosamente', 'success');
+        } else {
+          showNotification(out.message || 'Error al enviar tarea', 'error');
+        }
+      } catch (error) {
+        show('batchOut', error.message, true);
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    // Upload function
+    async function uploadFiles() {
+      const btn = event.target;
+      setLoading(btn, true);
+      
+      try {
+        const files = document.getElementById('fileInput').files;
+        
+        if (!files || files.length === 0) { 
+          showNotification('Por favor selecciona al menos un archivo', 'warning');
+          return; 
+        }
+        
+        const fd = new FormData();
+        for (const f of files) {
+          fd.append('files', f);
+        }
+        
+        const out = await http('POST', '/files/upload', fd, true);
+        show('uploadOut', out);
+        showNotification(`${files.length} archivo(s) subido(s) exitosamente`, 'success');
+      } catch (error) {
+        show('uploadOut', error.message, true);
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    // Initialize app
+    document.addEventListener('DOMContentLoaded', function() {
+      showNotification('Panel de control iniciado', 'success');
+      
+      // Auto-connect test
+      setTimeout(async () => {
+        try {
+          await http('GET', '/nodes');
+          document.getElementById('status').textContent = 'Conectado';
+        } catch {
+          document.getElementById('status').textContent = 'Desconectado';
+          document.querySelector('.status-badge').className = 'status-badge status-error';
+        }
+      }, 1000);
+    });
+
+    // Add CSS for animations
+    const style = document.createElement('style');
+    style.textContent = `
+      /* Animations are now in styles.css */
+    `;
+    document.head.appendChild(style);
   </script>
 </body>
 </html>
