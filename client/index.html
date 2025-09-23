@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Cliente Web - Distribuidos (Avance 2)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 20px; }
+    h1 { font-size: 20px; }
+    section { border: 1px solid #ddd; padding: 16px; border-radius: 8px; margin-bottom: 16px; }
+    label { display: block; margin-top: 8px; }
+    input[type="text"], input[type="email"], input[type="number"] { width: 280px; padding: 6px; }
+    button { padding: 8px 12px; margin-top: 10px; cursor: pointer; }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; }
+    pre { background: #f7f7f7; padding: 10px; border-radius: 6px; overflow: auto; max-height: 260px; }
+    .ok { color: #0a884f; }
+    .err { color: #b00020; }
+    small.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <h1>Cliente Web - Sistema Distribuido (Avance 2)</h1>
+  <p>Conecta con el backend FastAPI y el worker gRPC. Abre Swagger en <a href="http://127.0.0.1:8000/docs" target="_blank">/docs</a>.</p>
+
+  <section>
+    <h2>Configuración</h2>
+    <label>API Base URL:
+      <input id="apiBase" type="text" value="http://127.0.0.1:8000" />
+    </label>
+    <div>Estado: <span id="status" class="ok">listo</span></div>
+  </section>
+
+  <section>
+    <h2>Auth</h2>
+    <div class="row">
+      <div>
+        <h3>Signup</h3>
+        <label>Email: <input id="signupEmail" type="email" value="demo@example.com" /></label>
+        <label>Nombre: <input id="signupName" type="text" value="Demo" /></label>
+        <button onclick="signup()">Crear usuario</button>
+      </div>
+      <div>
+        <h3>Login</h3>
+        <label>Email: <input id="loginEmail" type="email" value="demo@example.com" /></label>
+        <button onclick="login()">Login</button>
+        <div><small class="mono">userId: <span id="userId">-</span>, token: <span id="token">-</span></small></div>
+      </div>
+    </div>
+    <pre id="authOut"></pre>
+  </section>
+
+  <section>
+    <h2>Nodos</h2>
+    <div class="row">
+      <div>
+        <h3>Registrar nodo</h3>
+        <label>Nombre: <input id="nodeName" type="text" value="nodo1" /></label>
+        <label>Host: <input id="nodeHost" type="text" value="127.0.0.1" /></label>
+        <label>Port: <input id="nodePort" type="number" value="50051" /></label>
+        <button onclick="registerNode()">Registrar</button>
+      </div>
+      <div>
+        <h3>Ping</h3>
+        <label>Node ID: <input id="pingNodeId" type="number" value="1" /></label>
+        <button onclick="pingNode()">Ping</button>
+      </div>
+      <div>
+        <h3>Listar nodos</h3>
+        <button onclick="listNodes()">Listar</button>
+      </div>
+    </div>
+    <pre id="nodesOut"></pre>
+  </section>
+
+  <section>
+    <h2>Batches (prueba)</h2>
+    <div class="row">
+      <div>
+        <h3>Enviar batch</h3>
+        <label>User ID: <input id="batchUserId" type="number" value="1" /></label>
+        <label>Imágenes (JSON):
+          <textarea id="imagesJson" rows="6" cols="50">[
+  {"image_id":"img1","operations":["grayscale","resize:800x600"]},
+  {"image_id":"img2","operations":["rotate:90"]}
+]</textarea>
+        </label>
+        <button onclick="submitBatch()">Crear batch</button>
+      </div>
+      <div>
+        <h3>Status de batch</h3>
+        <label>Batch ID: <input id="batchId" type="number" value="1" /></label>
+        <button onclick="batchStatus()">Consultar</button>
+      </div>
+      <div>
+        <h3>Dispatch test → worker</h3>
+        <label>Batch ID: <input id="dispatchBatchId" type="number" value="1" /></label>
+        <label>Node ID: <input id="dispatchNodeId" type="number" value="1" /></label>
+        <button onclick="dispatchTest()">Enviar tarea</button>
+      </div>
+    </div>
+    <pre id="batchOut"></pre>
+  </section>
+
+  <section>
+    <h2>Upload</h2>
+    <input id="fileInput" type="file" multiple />
+    <button onclick="uploadFiles()">Subir</button>
+    <pre id="uploadOut"></pre>
+  </section>
+
+  <script>
+    function apiBase() {
+      return document.getElementById('apiBase').value.trim().replace(/\/+$/, '');
+    }
+    function show(elId, data) {
+      document.getElementById(elId).textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    }
+    async function http(method, path, body, isForm=false) {
+      const url = apiBase() + path;
+      const opts = { method, headers: {} };
+      if (!isForm && body !== undefined) {
+        opts.headers['Content-Type'] = 'application/json';
+        opts.body = JSON.stringify(body);
+      }
+      if (isForm) {
+        opts.body = body; // FormData
+      }
+      const res = await fetch(url, opts);
+      const txt = await res.text();
+      try { return JSON.parse(txt); } catch { return txt; }
+    }
+
+    // Auth
+    async function signup() {
+      const email = document.getElementById('signupEmail').value;
+      const name = document.getElementById('signupName').value;
+      const out = await http('POST', '/auth/signup', { email, name });
+      show('authOut', out);
+      if (out.user_id) document.getElementById('userId').textContent = out.user_id;
+    }
+    async function login() {
+      const email = document.getElementById('loginEmail').value;
+      const out = await http('POST', '/auth/login', { email });
+      show('authOut', out);
+      if (out.user_id) document.getElementById('userId').textContent = out.user_id;
+      if (out.token) document.getElementById('token').textContent = out.token;
+    }
+
+    // Nodes
+    async function registerNode() {
+      const name = document.getElementById('nodeName').value;
+      const host = document.getElementById('nodeHost').value;
+      const port = parseInt(document.getElementById('nodePort').value, 10);
+      const out = await http('POST', '/nodes/register', { name, host, port });
+      show('nodesOut', out);
+      if (out.id) document.getElementById('pingNodeId').value = out.id;
+    }
+    async function listNodes() {
+      const out = await http('GET', '/nodes');
+      show('nodesOut', out);
+    }
+    async function pingNode() {
+      const id = parseInt(document.getElementById('pingNodeId').value, 10);
+      const out = await http('POST', `/nodes/${id}/ping`);
+      show('nodesOut', out);
+    }
+
+    // Batches
+    async function submitBatch() {
+      const user_id = parseInt(document.getElementById('batchUserId').value, 10);
+      let images = [];
+      try { images = JSON.parse(document.getElementById('imagesJson').value); }
+      catch { alert('JSON inválido en imágenes'); return; }
+      const out = await http('POST', '/batches/submit', { user_id, images, note: 'demo desde la web' });
+      show('batchOut', out);
+      if (out.batch_id) {
+        document.getElementById('batchId').value = out.batch_id;
+        document.getElementById('dispatchBatchId').value = out.batch_id;
+      }
+    }
+    async function batchStatus() {
+      const batchId = parseInt(document.getElementById('batchId').value, 10);
+      const out = await http('GET', `/batches/${batchId}/status`);
+      show('batchOut', out);
+    }
+    async function dispatchTest() {
+      const batchId = parseInt(document.getElementById('dispatchBatchId').value, 10);
+      const nodeId = parseInt(document.getElementById('dispatchNodeId').value, 10);
+      const out = await http('POST', `/batches/${batchId}/dispatch_test/${nodeId}`);
+      show('batchOut', out);
+    }
+
+    // Upload
+    async function uploadFiles() {
+      const files = document.getElementById('fileInput').files;
+      if (!files || files.length === 0) { alert('Selecciona archivos'); return; }
+      const fd = new FormData();
+      for (const f of files) fd.append('files', f);
+      const out = await http('POST', '/files/upload', fd, true);
+      show('uploadOut', out);
+    }
+  </script>
+</body>
+</html>
